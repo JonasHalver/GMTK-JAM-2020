@@ -52,10 +52,15 @@ namespace UnityTemplateProjects
             public void UpdateTransform(Transform t)
             {
                 t.eulerAngles = new Vector3(pitch, yaw, roll);
-                t.position = new Vector3(x, y, z);
+                //t.position = new Vector3(x, y, z);
             }
         }
-        
+
+        public float minY, maxY;
+        public Transform camTransform;
+        Camera cam;
+        public Vector3 standardView, aimView, sprintView, targetView;
+
         CameraState m_TargetCameraState = new CameraState();
         CameraState m_InterpolatingCameraState = new CameraState();
 
@@ -80,6 +85,13 @@ namespace UnityTemplateProjects
         {
             m_TargetCameraState.SetFromTransform(transform);
             m_InterpolatingCameraState.SetFromTransform(transform);
+        }
+
+        void Start()
+        {
+            cam = Camera.main;
+            camTransform = transform.GetChild(0);
+            Cursor.lockState = CursorLockMode.Locked;
         }
 
         Vector3 GetInputTranslationDirection()
@@ -127,30 +139,48 @@ namespace UnityTemplateProjects
 				#endif
             }
             // Hide and lock cursor when right mouse button pressed
-            if (Input.GetMouseButtonDown(1))
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-            }
+            //if (Input.GetMouseButtonDown(1))
+            //{
+            //    Cursor.lockState = CursorLockMode.Locked;
+            //}
 
             // Unlock and show cursor when right mouse button released
-            if (Input.GetMouseButtonUp(1))
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
+            //if (Input.GetMouseButtonUp(1))
+            //{
+            //    Cursor.visible = true;
+            //    Cursor.lockState = CursorLockMode.None;
+            //}
 
             // Rotation
+
+            var mouseMovement = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y") * (invertY ? 1 : -1));
+
+            var mouseSensitivityFactor = mouseSensitivityCurve.Evaluate(mouseMovement.magnitude);
+
+            m_TargetCameraState.yaw += mouseMovement.x * mouseSensitivityFactor;
+            m_TargetCameraState.pitch += mouseMovement.y * mouseSensitivityFactor;
+
+            m_TargetCameraState.pitch = Mathf.Clamp(m_TargetCameraState.pitch, minY, maxY);
+
             if (Input.GetMouseButton(1))
             {
-                var mouseMovement = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y") * (invertY ? 1 : -1));
-                
-                var mouseSensitivityFactor = mouseSensitivityCurve.Evaluate(mouseMovement.magnitude);
-
-                m_TargetCameraState.yaw += mouseMovement.x * mouseSensitivityFactor;
-                m_TargetCameraState.pitch += mouseMovement.y * mouseSensitivityFactor;
+                targetView = aimView;
+                cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 40, 10 * Time.deltaTime);
             }
-            
-            // Translation
+            else if (Input.GetButton("Sprint"))
+            {
+                targetView = sprintView;
+                cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 60, 10 * Time.deltaTime);
+            }
+            else
+            {
+                targetView = standardView;
+                cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 60, 10 * Time.deltaTime);
+            }
+
+            camTransform.localPosition = Vector3.Lerp(camTransform.localPosition, targetView, 5 * Time.deltaTime);
+
+                // Translation
             translation = GetInputTranslationDirection() * Time.deltaTime;
 
             // Speed up movement when shift key held
