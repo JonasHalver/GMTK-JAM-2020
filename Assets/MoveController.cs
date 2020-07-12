@@ -13,6 +13,11 @@ public class MoveController : MonoBehaviour
     public List<AudioClip> steps = new List<AudioClip>();
     float t = 0;
 
+    public Animator anim;
+
+    bool sprinting;
+    bool aiming;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -23,13 +28,33 @@ public class MoveController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        anim.ResetTrigger("Shoot");
+        aiming = Input.GetMouseButton(1);
+        sprinting = !aiming && Input.GetButton("Sprint");
         speedModifier = Input.GetMouseButton(1) ? aimModifier : (Input.GetButton("Sprint") ? sprintModifier : 1);
         movementVector = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
         TranslateMovement(CameraForward(movementVector));
         if (movementVector != Vector3.zero)
         {
+            anim.SetFloat("IdleWalk", 1f);
             Footsteps();
+
+            if (sprinting)
+                anim.SetFloat("WalkSprint", 1f);
+            else
+                anim.SetFloat("WalkSprint", 0f);
+
         }
+        else
+        {
+            anim.SetFloat("IdleWalk", 0f);
+        }
+
+        anim.SetBool("Aiming", aiming);
+
+        if (Input.GetButtonDown("Fire1"))
+            anim.SetTrigger("Shoot");
+
     }
 
     Vector3 CameraForward(Vector3 input)
